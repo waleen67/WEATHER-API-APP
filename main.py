@@ -3,21 +3,33 @@ import requests
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QMessageBox, QVBoxLayout
 from PyQt5.QtCore import Qt
 
+
+API_KEY = "PUT_YOUR_API_KEY_HERE"
+
+
 class WeatherApp(QWidget):
+
     def __init__(self):
         super().__init__()
-        self.city_label = QLabel("enter city name", self)
-        self.city_input = QLineEdit(self)
-        self.get_weather_button = QPushButton("get weather", self)
-        self.temperature_label = QLabel("enter temperature", self)
-        self.emoji_label = QLabel("⭐", self)
-        self.description_label = QLabel("sunny", self)
+
+        self.city_label = QLabel("Enter City Name")
+        self.city_input = QLineEdit()
+        self.get_weather_button = QPushButton("Get Weather")
+
+        self.temperature_label = QLabel("")
+        self.emoji_label = QLabel("")
+        self.description_label = QLabel("")
+
         self.initUI()
 
+        self.get_weather_button.clicked.connect(self.get_weather)
+
     def initUI(self):
+
         self.setWindowTitle("Weather App")
 
         vbox = QVBoxLayout()
+
         vbox.addWidget(self.city_label)
         vbox.addWidget(self.city_input)
         vbox.addWidget(self.get_weather_button)
@@ -28,37 +40,60 @@ class WeatherApp(QWidget):
         self.setLayout(vbox)
 
         self.city_label.setAlignment(Qt.AlignCenter)
-        self.city_input.setAlignment(Qt.AlignCenter)
         self.temperature_label.setAlignment(Qt.AlignCenter)
         self.emoji_label.setAlignment(Qt.AlignCenter)
         self.description_label.setAlignment(Qt.AlignCenter)
 
-        self.city_label.setObjectName("city_label")
-        self.city_input.setObjectName("city_input")
-        self.get_weather_button.setObjectName("get_weather_button")
-        self.temperature_label.setObjectName("temperature_label")
-        self.emoji_label.setObjectName("emoji_label")
-        self.description_label.setObjectName("description_label")
+    def get_weather(self):
 
-        self.setStyleSheet("""
-        QLabel, QPushButton {
-            font-family: Calibri;
-        }
+        city = self.city_input.text()
 
-        QLabel#city_label {
-            font-size: 40px;
-            font-style: italic;
-        }
+        if not city:
+            QMessageBox.warning(self, "Error", "Please enter a city name")
+            return
 
-        QLineEdit#city_input {
-            font-size: 40px;
-            font-weight: bold;
-        }
-        """)
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+
+        try:
+            response = requests.get(url)
+            data = response.json()
+
+            if response.status_code != 200:
+                QMessageBox.warning(self, "Error", data["message"])
+                return
+
+            temperature = data["main"]["temp"]
+            description = data["weather"][0]["description"]
+            weather_id = data["weather"][0]["id"]
+
+            self.temperature_label.setText(f"{temperature} °C")
+            self.description_label.setText(description)
+            self.emoji_label.setText(self.get_weather_emoji(weather_id))
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def get_weather_emoji(self, weather_id):
+
+        if 200 <= weather_id < 300:
+            return "⛈️"
+        elif 300 <= weather_id < 400:
+            return "🌦️"
+        elif 500 <= weather_id < 600:
+            return "🌧️"
+        elif 600 <= weather_id < 700:
+            return "❄️"
+        elif 700 <= weather_id < 800:
+            return "🌫️"
+        elif weather_id == 800:
+            return "☀️"
+        elif 801 <= weather_id < 810:
+            return "☁️"
+
 
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
-    Weather_app = WeatherApp()
-    Weather_app.show()
+    weather_app = WeatherApp()
+    weather_app.show()
     sys.exit(app.exec_())
